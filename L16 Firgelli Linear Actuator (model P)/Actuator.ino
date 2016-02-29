@@ -1,22 +1,28 @@
 /*
-  ver 1.0
-  A program to control the linear actuator and print
-  its displacement to the output channel.
-
-  Known issues:
-  1) The actuator can be heared stalling when non of the
-     buttons are pressed which may reduce its lifespan.
-  2) Readings update too fast which may reduce reliability
-     of the measurments.
-  3) Readings exceed the 100mm mark (will fix later). 
+ * ver 1.1
+ * A program to control the linear actuator and print
+ * its displacement to the output channel.
+ *
+ * Changelog:
+ * 1) Resolved stalling issues.
+ * 2) Readings are now scaled down to 100mm.
+ * 
+ * Known issues:
+ * 1) Readings update too fast which may reduce reliability
+ *    of the measurments.
+ * 2) Readings never reach the 100mm mark. Max reading
+ *    is 98mm for some reason.
+ * 
 */
 
-byte black = 10;    //black wire
-byte red = 6;       //red wire
-byte blue = A1;     //blue wire
-byte yellow = 12;   //high reference rail
-bool button1 = 0;   //call extend function (pin 8)
-bool button2 = 0;   //call pull function (pin 9)
+byte black = 10;      //black wire
+byte red = 6;         //red wire
+byte blue = A1;       //analogRead wire
+byte yellow = 12;     //high reference rail
+bool button;          //button attached to (pin 9)
+byte buttonState = 1; //state trigger 
+
+// ------------------- Arduino Functions -------------------
 
 void setup() {
 
@@ -29,37 +35,62 @@ void setup() {
 }
 
 void loop() {
-
-  button1 = digitalRead(8);
-  button2 = digitalRead(9);
-
-  if (button1) {
-    extendArm();
+  button = digitalRead(9);
+  if (button == false) {
+    buttonState++;
+    delay(500);
+    if (buttonState > 1) {
+      buttonState = 0;
+    }
   }
 
-  if (button2) {
-    pullArm();
+  switch (buttonState) {
+    case 1:
+      extendArm();
+      break;
+
+    case 0:
+      pullArm();
+      break;
   }
 
 }
 
-
-
 //--------------------- Functions ---------------------
 
-// extends arm
+// extending state
 void extendArm() {
   digitalWrite(yellow, HIGH);
   digitalWrite(black, HIGH);
   digitalWrite(red, LOW);
-  Serial.println(analogRead(blue));
+
+  // read displacement
+  unsigned int displacement = analogRead(blue);
+  displacement = map(displacement, 0, 1023, 0, 100);
+  displacement = constrain(displacement, 0, 100);
+
+  // print displacement
+  Serial.print("Displacement= ");
+  Serial.print(displacement);
+  Serial.println("mm");
+
 }
 
-// pulls arm
+// retracting state
 void pullArm() {
   digitalWrite(yellow, HIGH);
   digitalWrite(black, LOW);
   digitalWrite(red, HIGH);
-  Serial.println(analogRead(blue));
+
+  // read displacement
+  unsigned int displacement = analogRead(blue);
+  displacement = map(displacement, 0, 1023, 0, 100);
+  displacement = constrain(displacement, 0, 100);
+
+  // print displacement
+  Serial.print("Displacement= ");
+  Serial.print(displacement);
+  Serial.println("mm");
+
 }
 
